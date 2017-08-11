@@ -20,10 +20,10 @@ func TestNewCache(t *testing.T) {
 	var c *cache.Cache
 	home, _ := homedir.Dir()
 
-	// with no dir (default to homedir)
+	// with no dir (default to homedir/.envkey/cache)
 	c, _ = cache.NewCache("")
 	assert.NotNil(t, c.Done, "done channel initialized")
-	assert.Equal(t, c.Dir, home, "default dir is homedir")
+	assert.Equal(t, c.Dir, (home + "/.envkey/cache"), "default dir is homedir/.envkey/cache")
 
 	// with supplied dir
 	c, _ = cache.NewCache("/dev/null")
