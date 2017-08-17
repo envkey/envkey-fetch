@@ -21,9 +21,10 @@
 package cmd
 
 import (
-	"envkey/envkey-fetch/fetch"
 	"fmt"
 	"os"
+
+	"github.com/envkey/envkey-fetch/fetch"
 
 	"github.com/spf13/cobra"
 )

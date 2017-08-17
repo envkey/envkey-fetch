@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"envkey/envkey-fetch/cache"
+	"github.com/envkey/envkey-fetch/cache"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/stretchr/testify/assert"

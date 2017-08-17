@@ -1,8 +1,9 @@
 package trust
 
 import (
-	"envkey/envkey-fetch/crypto"
 	"errors"
+
+	"github.com/envkey/envkey-fetch/crypto"
 
 	"golang.org/x/crypto/openpgp"
 )

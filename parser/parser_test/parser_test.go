@@ -1,8 +1,9 @@
 package parser_test
 
 import (
-	"envkey/envkey-fetch/parser"
 	"testing"
+
+	"github.com/envkey/envkey-fetch/parser"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -1,8 +1,9 @@
 package crypto_test
 
 import (
-	"envkey/envkey-fetch/crypto"
 	"testing"
+
+	"github.com/envkey/envkey-fetch/crypto"
 
 	"github.com/stretchr/testify/assert"
 )

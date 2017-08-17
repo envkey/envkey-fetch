@@ -2,13 +2,14 @@ package fetch
 
 import (
 	"encoding/json"
-	"envkey/envkey-fetch/cache"
-	"envkey/envkey-fetch/parser"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/envkey/envkey-fetch/cache"
+	"github.com/envkey/envkey-fetch/parser"
 )
 
 type FetchOptions struct {

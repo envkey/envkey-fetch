@@ -20,7 +20,7 @@
 
 package main
 
-import "envkey/envkey-fetch/cmd"
+import "github.com/envkey/envkey-fetch/cmd"
 
 func main() {
 	cmd.Execute()

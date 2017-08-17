@@ -1,11 +1,12 @@
 package fetch_test
 
 import (
-	"envkey/envkey-fetch/cache"
-	"envkey/envkey-fetch/fetch"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/envkey/envkey-fetch/cache"
+	"github.com/envkey/envkey-fetch/fetch"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/jarcoal/httpmock.v1"

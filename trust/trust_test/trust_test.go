@@ -1,9 +1,9 @@
 package trust_test
 
 import (
-	"envkey/envkey-fetch/trust"
 	"testing"
 
+	"github.com/envkey/envkey-fetch/trust"
 	"github.com/stretchr/testify/assert"
 )
 
