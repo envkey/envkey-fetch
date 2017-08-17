@@ -2,9 +2,10 @@ package parser
 
 import (
 	"encoding/json"
-	"envkey/envkey-fetch/crypto"
-	"envkey/envkey-fetch/trust"
 	"errors"
+
+	"github.com/envkey/envkey-fetch/crypto"
+	"github.com/envkey/envkey-fetch/trust"
 
 	"golang.org/x/crypto/openpgp"
 )
