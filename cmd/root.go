@@ -34,8 +34,8 @@ var shouldCache bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "envkey-fetch",
-	Short: "Fetches, decrypts, and verifies Envkey config. Accepts a single envkey as an argument. Returns decrypted config as json.",
+	Use:   "envkey-fetch YOUR-ENVKEY",
+	Short: "Fetches, decrypts, and verifies EnvKey config. Accepts a single envkey as an argument. Returns decrypted config as json.",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			fmt.Println(fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir}))
