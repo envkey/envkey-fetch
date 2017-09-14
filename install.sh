@@ -51,7 +51,7 @@ function download_envkey {
   if [ "$PLATFORM" == "darwin" ]; then
     mv envkey-fetch /usr/local/bin/
   else
-    sudo envkey-fetch /usr/local/bin/
+    sudo mv envkey-fetch /usr/local/bin/
   fi
 
   echo "envkey-fetch is installed in /usr/local/bin"
