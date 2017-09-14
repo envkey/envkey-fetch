@@ -34,7 +34,7 @@ func Fetch(envkey string, options FetchOptions) string {
 
 	response, envkeyParam, pw, err := fetchEnv(envkey, fetchCache)
 	if err != nil {
-		return "error: " + string(err)
+		return "error: " + err.Error()
 	}
 	res, err := response.Parse(pw)
 	if err != nil {
