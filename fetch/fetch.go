@@ -21,6 +21,10 @@ const DefaultHost = "env-service.herokuapp.com"
 const ApiVersion = 1
 
 func Fetch(envkey string, options FetchOptions) string {
+	if len(strings.Split(envkey, "-")) < 2 {
+		return "error: ENVKEY invalid"
+	}
+
 	var fetchCache *cache.Cache
 
 	if options.ShouldCache {
@@ -30,14 +34,14 @@ func Fetch(envkey string, options FetchOptions) string {
 
 	response, envkeyParam, pw, err := fetchEnv(envkey, fetchCache)
 	if err != nil {
-		return ""
+		return "error: " + string(err)
 	}
 	res, err := response.Parse(pw)
 	if err != nil {
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
 		}
-		return ""
+		return "error: ENVKEY invalid"
 	}
 
 	// Ensure cache bizness finished (don't worry about error)
@@ -109,7 +113,7 @@ func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceR
 		// Since http request failed, try loading from cache
 		if fetchCache == nil {
 			if err == nil {
-				return errors.New("Server error.")
+				return errors.New("server error.")
 			} else {
 				return err
 			}
@@ -125,7 +129,7 @@ func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceR
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
 		}
-		return errors.New("Envkey not found")
+		return errors.New("ENVKEY invalid")
 	}
 
 	err = json.Unmarshal(body, response)
