@@ -48,7 +48,12 @@ function download_envkey {
   curl -s -o envkey-fetch.tar.gz "${url}"
   tar zxf envkey-fetch.tar.gz
 
-  mv envkey-fetch /usr/local/bin/
+  if [["$PLATFORM" == 'darwin']]; then
+    mv envkey-fetch /usr/local/bin/
+  else
+    sudo envkey-fetch /usr/local/bin/
+  fi
+
   echo "envkey-fetch is installed in /usr/local/bin"
 
   rm envkey-fetch.tar.gz
