@@ -25,22 +25,29 @@ import (
 	"os"
 
 	"github.com/envkey/envkey-fetch/fetch"
+	"github.com/envkey/envkey-fetch/version"
 
 	"github.com/spf13/cobra"
 )
 
 var cacheDir string
 var shouldCache bool
+var printVersion bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "envkey-fetch YOUR-ENVKEY",
-	Short: "Fetches, decrypts, and verifies EnvKey config. Accepts a single envkey as an argument. Returns decrypted config as json.",
+	Short: "Fetches, decrypts, and verifies EnvKey config. Accepts a single envkey as an argument. Returns decrypted config as json. Can optionally cache encrypted config locally.",
 	Run: func(cmd *cobra.Command, args []string) {
+		if printVersion {
+			fmt.Println(version.Version)
+			return
+		}
+
 		if len(args) > 0 {
 			fmt.Println(fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir}))
 		} else {
-			fmt.Println("envkey required.")
+			cmd.Help()
 		}
 	},
 }
@@ -55,6 +62,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config if enabled for org (default is false)")
+	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config as a local backup if enabled for org (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
+	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 }

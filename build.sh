@@ -1,1 +1,0 @@
-gox -ldflags='-extldflags "-static"' -output="bin/{{.Dir}}-{{.OS}}-{{.Arch}}"
