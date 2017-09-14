@@ -17,7 +17,7 @@ type FetchOptions struct {
 	CacheDir    string
 }
 
-const DefaultHost = "env-service.herokuapp.com"
+const DefaultHost = "env.envkey.com"
 const ApiVersion = 1
 
 func Fetch(envkey string, options FetchOptions) string {
