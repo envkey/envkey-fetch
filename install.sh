@@ -51,8 +51,11 @@ function download_envkey {
     mv envkey-fetch /usr/local/bin/
     echo "envkey-fetch is installed in /usr/local/bin"
   elif [ "$PLATFORM" == "windows" ]; then
-    mv envkey-fetch.exe /usr/bin/
-    echo "envkey-fetch is installed in /usr/bin"
+    # ensure /usr/local/bin exists (it's in PATH but not present in default git-bash install)
+    mkdir /usr/local
+    mkdir /usr/local/bin
+    mv envkey-fetch.exe /usr/local/bin/
+    echo "envkey-fetch is installed in /usr/local/bin"
   else
     sudo mv envkey-fetch /usr/local/bin/
     echo "envkey-fetch is installed in /usr/local/bin"
