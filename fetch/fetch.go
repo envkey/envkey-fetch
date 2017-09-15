@@ -18,6 +18,7 @@ type FetchOptions struct {
 }
 
 const DefaultHost = "env.envkey.com"
+const BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
 const ApiVersion = 1
 
 func Fetch(envkey string, options FetchOptions) string {
@@ -97,11 +98,23 @@ func getJsonUrl(envkeyHost string, envkeyParam string) string {
 func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceResponse, fetchCache *cache.Cache) error {
 	var err error
 	var body []byte
+	var r *http.Response
 
 	url := getJsonUrl(envkeyHost, envkeyParam)
-	r, err := http.Get(url)
+	r, err = http.Get(url)
 	if r != nil {
 		defer r.Body.Close()
+	}
+
+	// If http request failed and we're using the default host, now try backup host
+	if err != nil || r.StatusCode >= 500 {
+		if envkeyHost == DefaultHost {
+			backupUrl := strings.Replace(url, DefaultHost, BackupDefaultHost, 1)
+			r, err = http.Get(backupUrl)
+			if r != nil {
+				defer r.Body.Close()
+			}
+		}
 	}
 
 	if err == nil && r.StatusCode == 200 {
@@ -109,8 +122,8 @@ func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceR
 		if err != nil {
 			return err
 		}
-	} else if err != nil || r.StatusCode == 500 {
-		// Since http request failed, try loading from cache
+	} else if err != nil || r.StatusCode >= 500 {
+		// try loading from cache
 		if fetchCache == nil {
 			if err == nil {
 				return errors.New("server error.")
@@ -125,7 +138,7 @@ func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceR
 		}
 
 	} else if r.StatusCode == 404 {
-		// Since envkey wasn't find and permission may have been removed, clear cache
+		// Since envkey wasn't found and permission may have been removed, clear cache
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
 		}

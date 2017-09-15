@@ -12,7 +12,7 @@ import (
 	"gopkg.in/jarcoal/httpmock.v1"
 )
 
-var errorResult = ""
+var errorResult = "error: ENVKEY invalid"
 
 var validResult = `{"GO_TEST":"it","GO_TEST_2":"works!"}`
 
@@ -110,6 +110,27 @@ func TestFetch(t *testing.T) {
 		err, _ := c.Read(envkeyParam)
 		assert.Nil(err, "Should not cache the response.")
 	}
+}
+
+const VALID_LIVE_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2o-env-staging.envkey.com"
+const INVALID_LIVE_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2oinvalid-env-staging.envkey.com"
+const BACKUP_TEST_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2o"
+
+func TestLiveFetch(t *testing.T) {
+	assert := assert.New(t)
+
+	// Test valid
+	validRes := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, ""})
+	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\"}", validRes)
+
+	// Test invalid
+	invalidRes := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, ""})
+	assert.Equal("error: ENVKEY invalid", invalidRes)
+
+	// Test with backup
+	// Fetch.DefaultHost = "localhost:459843"
+	// Fetch.BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
+
 }
 
 const customRemoteHost = "env-service.customhost.com"
