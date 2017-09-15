@@ -13,7 +13,7 @@ case "$(uname -s)" in
    PLATFORM='freebsd'
    ;;
 
- CYGWIN*|MINGW32*|MSYS*)
+ CYGWIN*|MINGW*|MSYS*)
    PLATFORM='windows'
    ;;
 
