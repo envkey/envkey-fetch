@@ -14,8 +14,7 @@ case "$(uname -s)" in
    ;;
 
  CYGWIN*|MINGW32*|MSYS*)
-   echo "This install script is not compatible with windows. Download the latest .exe release and put it in your PATH: https://github.com/envkey/envkey-fetch/releases"
-   exit 1
+   PLATFORM='windows'
    ;;
 
  *)
@@ -50,11 +49,14 @@ function download_envkey {
 
   if [ "$PLATFORM" == "darwin" ]; then
     mv envkey-fetch /usr/local/bin/
+    echo "envkey-fetch is installed in /usr/local/bin"
+  elif [ "$PLATFORM" == "windows" ]; then
+    mv envkey-fetch.exe /usr/bin/
+    echo "envkey-fetch is installed in /usr/bin"
   else
     sudo mv envkey-fetch /usr/local/bin/
+    echo "envkey-fetch is installed in /usr/local/bin"
   fi
-
-  echo "envkey-fetch is installed in /usr/local/bin"
 
   rm envkey-fetch.tar.gz
   rm -f envkey-fetch
