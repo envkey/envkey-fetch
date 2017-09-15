@@ -62,7 +62,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config as a local backup if enabled for org (default is false)")
+	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config as a local backup (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 }
