@@ -8,7 +8,7 @@ If you want to build an EnvKey library in a language that isn't yet officially s
 
 ## Installation
 
-envkey-fetch compiles into a simple static binary with no dependencies, which makes installation a simple matter of fetching the right binary for your platform and putting it in your PATH. An `install.sh` script is available to simplify this.
+envkey-fetch compiles into a simple static binary with no dependencies, which makes installation a simple matter of fetching the right binary for your platform and putting it in your `PATH`. An `install.sh` script is available to simplify this.
 
 **Install via bash:**
 
