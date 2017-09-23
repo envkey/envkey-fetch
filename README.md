@@ -8,19 +8,19 @@ If you want to build an EnvKey library in a language that isn't yet officially s
 
 ## Installation
 
-envkey-fetch is a simple static binary with no dependencies.
+envkey-fetch compiles into a simple static binary with no dependencies.
 
-**Via bash:**
+**Install via bash:**
 
 ```bash
 curl -s https://raw.githubusercontent.com/envkey/envkey-fetch/master/install.sh | bash
 ```
 
-**Manually:**
+**Install manually:**
 
 Find the [release](https://github.com/envkey/envkey-fetch/releases) for your platform and architecture, and stick the appropriate binary somewhere in your `PATH` (or wherever you like really).
 
-**From source:**
+**Install from source:**
 
 With Go installed, clone the project into your `GOPATH`. Run `go get` and `go build`.
 
@@ -30,9 +30,23 @@ With Go installed, clone the project into your `GOPATH`. Run `go get` and `go bu
 envkey-fetch YOUR-ENVKEY [flags]
 ```
 
-## Flags
+This will either write your the app environment's configuration associated with your `ENVKEY` as json to stdout or write an error message beginning with `error:` to stdout.
 
-```bash
+### Example json output
+
+```json
+{"TEST":"it","TEST_2":"works!"}
+```
+
+### Example error output
+
+```text
+error: ENVKEY invalid
+```
+
+### Flags
+
+```text
 --cache              cache encrypted config as a local backup (default is false)
 --cache-dir string   cache directory (default is $HOME/.envkey/cache)
 -h, --help           help for envkey-fetch
