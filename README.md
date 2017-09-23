@@ -22,7 +22,7 @@ Find the [release](https://github.com/envkey/envkey-fetch/releases) for your pla
 
 **Install from source:**
 
-With Go installed, clone the project into your `GOPATH`. Run `go get` and `go build`.
+With Go installed, clone the project into your `GOPATH`. `cd` into the directory and run `go get` and `go build`.
 
 ## Usage
 
