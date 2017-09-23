@@ -47,10 +47,10 @@ error: ENVKEY invalid
 ### Flags
 
 ```text
---cache              cache encrypted config as a local backup (default is false)
---cache-dir string   cache directory (default is $HOME/.envkey/cache)
--h, --help           help for envkey-fetch
--v, --version        prints the version
+    --cache              cache encrypted config as a local backup (default is false)
+    --cache-dir string   cache directory (default is $HOME/.envkey/cache)
+-h, --help               help for envkey-fetch
+-v, --version            prints the version
 ```
 
 ## Further Reading
