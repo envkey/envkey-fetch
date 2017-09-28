@@ -3,5 +3,5 @@
 # Test binary, build with `go test -c`
 *.test
 
-envkey-fetch
+./envkey-fetch
 .ghtoken
