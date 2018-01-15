@@ -45,7 +45,8 @@ function download_envkey {
   url="https://raw.githubusercontent.com/envkey/envkey-fetch/master/dist/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
   echo "Downloading tarball from ${url}"
   curl -s -o envkey-fetch.tar.gz "${url}"
-  tar zxf envkey-fetch.tar.gz
+  tar zxf envkey-fetch.tar.gz envkey-fetch.exe
+  tar zxf envkey-fetch.tar.gz envkey-fetch
 
   if [ "$PLATFORM" == "darwin" ]; then
     mv envkey-fetch /usr/local/bin/
