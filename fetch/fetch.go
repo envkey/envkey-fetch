@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/parser"
+	"github.com/inancgumus/myhttp"
 )
 
 type FetchOptions struct {
@@ -101,16 +103,19 @@ func getJson(envkeyHost string, envkeyParam string, response *parser.EnvServiceR
 	var r *http.Response
 
 	url := getJsonUrl(envkeyHost, envkeyParam)
-	r, err = http.Get(url)
+
+	client := myhttp.New(time.Second * 2)
+
+	r, err = client.Get(url)
 	if r != nil {
 		defer r.Body.Close()
 	}
 
 	// If http request failed and we're using the default host, now try backup host
 	if err != nil || r.StatusCode >= 500 {
-		if envkeyHost == DefaultHost {
+		if envkeyHost == "" || envkeyHost == DefaultHost {
 			backupUrl := strings.Replace(url, DefaultHost, BackupDefaultHost, 1)
-			r, err = http.Get(backupUrl)
+			r, err = client.Get(backupUrl)
 			if r != nil {
 				defer r.Body.Close()
 			}
