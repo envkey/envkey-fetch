@@ -1,12 +1,16 @@
 package fetch_test
 
 import (
+	"fmt"
+	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/fetch"
+	"github.com/envkey/envkey-fetch/version"
 
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/jarcoal/httpmock.v1"
@@ -73,20 +77,31 @@ var fetchTests = []struct {
 
 func TestFetch(t *testing.T) {
 	assert := assert.New(t)
-	httpmock.Activate()
+	httpmock.ActivateNonDefault(fetch.HttpGetter.Client)
 	defer httpmock.DeactivateAndReset()
 
 	// Caching enabled
 
 	for _, test := range fetchTests {
 		var envkeyParam = strings.Split(test.envkey, "-")[0]
-		url := (test.protocol + "://" + test.host + "/v" + strconv.Itoa(fetch.ApiVersion) + "/" + envkeyParam)
 
-		httpmock.RegisterResponder("GET",
+		baseUrl := (test.protocol + "://" + test.host + "/v" + strconv.Itoa(fetch.ApiVersion) + "/" + envkeyParam)
+		fmtStr := "%s?clientName=envkey-fetch&clientVersion=%s&clientOs=%s&clientArch=%s"
+		url := fmt.Sprintf(
+			fmtStr,
+			baseUrl,
+			url.QueryEscape(version.Version),
+			url.QueryEscape(runtime.GOOS),
+			url.QueryEscape(runtime.GOARCH),
+		)
+
+		httpmock.RegisterResponder(
+			"GET",
 			url,
-			httpmock.NewStringResponder(test.responseStatus, test.response))
+			httpmock.NewStringResponder(test.responseStatus, test.response),
+		)
 
-		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{true, ""}), test.desc)
+		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{true, "", "envkey-fetch", version.Version}), test.desc)
 
 		// Test caching
 		var c *cache.Cache
@@ -103,7 +118,7 @@ func TestFetch(t *testing.T) {
 		}
 
 		// With caching disabled
-		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{false, ""}), test.desc)
+		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version}), test.desc)
 
 		// Ensure no caching
 		c, _ = cache.NewCache("")
@@ -120,17 +135,31 @@ func TestLiveFetch(t *testing.T) {
 	assert := assert.New(t)
 
 	// Test valid
-	validRes := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, ""})
+	validRes := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version})
 	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\"}", validRes)
 
 	// Test invalid
-	invalidRes := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, ""})
+	invalidRes := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version})
 	assert.Equal("error: ENVKEY invalid", invalidRes)
 
-	// Test with backup
-	// Fetch.DefaultHost = "localhost:459843"
-	// Fetch.BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
+}
 
+func TestBackup(t *testing.T) {
+	assert := assert.New(t)
+	httpmock.ActivateNonDefault(fetch.HttpGetter.Client)
+	defer httpmock.DeactivateAndReset()
+
+	// Test with backup
+	fetch.DefaultHost = "localhost:61034"
+	url := ("https://" + fetch.BackupDefaultHost + "/v" + strconv.Itoa(fetch.ApiVersion) + "/validkey")
+
+	httpmock.RegisterResponder(
+		"GET",
+		url,
+		httpmock.NewStringResponder(200, responseSimple),
+	)
+
+	assert.Equal(validResult, fetch.Fetch(validEnvkeySimple, fetch.FetchOptions{false, "", "envkey-fetch", version.Version}), "Backup")
 }
 
 const customRemoteHost = "env-service.customhost.com"
