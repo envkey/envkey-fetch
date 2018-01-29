@@ -33,6 +33,8 @@ import (
 var cacheDir string
 var shouldCache bool
 var printVersion bool
+var clientName string
+var clientVersion string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -45,7 +47,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			fmt.Println(fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir}))
+			fmt.Println(fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion}))
 		} else {
 			cmd.Help()
 		}
@@ -64,5 +66,7 @@ func Execute() {
 func init() {
 	RootCmd.Flags().BoolVar(&shouldCache, "cache", false, "cache encrypted config as a local backup (default is false)")
 	RootCmd.Flags().StringVar(&cacheDir, "cache-dir", "", "cache directory (default is $HOME/.envkey/cache)")
+	RootCmd.Flags().StringVar(&clientName, "client-name", "", "calling client library name (default is none)")
+	RootCmd.Flags().StringVar(&clientVersion, "client-version", "", "calling client library version (default is none)")
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 }
