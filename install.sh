@@ -45,15 +45,16 @@ function download_envkey {
   url="https://raw.githubusercontent.com/envkey/envkey-fetch/master/dist/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
   echo "Downloading tarball from ${url}"
   curl -s -o envkey-fetch.tar.gz "${url}"
-  tar zxf envkey-fetch.tar.gz envkey-fetch.exe
-  tar zxf envkey-fetch.tar.gz envkey-fetch
+
+  tar zxf envkey-fetch.tar.gz envkey-fetch.exe 2> /dev/null
+  tar zxf envkey-fetch.tar.gz envkey-fetch 2> /dev/null
 
   if [ "$PLATFORM" == "darwin" ]; then
     mv envkey-fetch /usr/local/bin/
     echo "envkey-fetch is installed in /usr/local/bin"
   elif [ "$PLATFORM" == "windows" ]; then
     # ensure $HOME/bin exists (it's in PATH but not present in default git-bash install)
-    mkdir $HOME/bin
+    mkdir $HOME/bin 2> /dev/null
     mv envkey-fetch.exe $HOME/bin/
     echo "envkey-fetch is installed in $HOME/bin"
   else
