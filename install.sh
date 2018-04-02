@@ -33,14 +33,14 @@ curl -s -o .ek_tmp_version https://raw.githubusercontent.com/envkey/envkey-fetch
 VERSION=$(cat .ek_tmp_version)
 rm .ek_tmp_version
 
-function welcome_envkey {
+welcome_envkey () {
   echo "envkey-fetch $VERSION Quick Install"
   echo "Copyright (c) 2017 Envkey Inc. - MIT License"
   echo "https://github.com/envkey/envkey-fetch"
   echo ""
 }
 
-function download_envkey {
+download_envkey () {
   echo "Downloading envkey-fetch binary for ${PLATFORM}-${ARCH}"
   url="https://raw.githubusercontent.com/envkey/envkey-fetch/master/dist/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
   echo "Downloading tarball from ${url}"
