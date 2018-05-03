@@ -15,6 +15,8 @@ import (
 	"golang.org/x/crypto/openpgp"
 )
 
+var httpGetter = myhttp.New(time.Second * 2)
+
 type EnvServiceResponse struct {
 	Env                                        string `json:"env"`
 	EncryptedPrivkey                           string `json:"encrypted_privkey"`
@@ -263,32 +265,15 @@ func (response *ResponseWithTrustChain) decryptAndVerify() (*DecryptedVerifiedRe
 	if response.hasInheritanceOverrides() {
 		decryptedVerifiedResponse.decryptInheritanceOverrides()
 		decryptedVerifiedResponse.checkInheritanceOverridesUrlPointer()
-
-		var env, inheritanceOverrides map[string]interface{}
-		err = json.Unmarshal(decryptedEnvBytes, &env)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal(decryptedInheritanceBytes, &inheritanceOverrides)
-		if err != nil {
-			return nil, err
-		}
-
-		decryptedVerifiedResponse.DecryptedEnv = env
-		decryptedVerifiedResponse.DecryptedInheritanceOverrides = inheritanceOverrides
 	}
 
 	return decryptedVerifiedResponse, nil
 }
 
 type DecryptedVerifiedResponse struct {
-	ResponseWithTrustChain              *ResponseWithTrustChain
-	DecryptedEnvBytes                   []byte
-	DecryptedInheritanceOverridesBytes  []byte
-	DecryptedEnvString                  string
-	DecryptedInheritanceOverridesString string
-	DecryptedEnv                        map[string]interface{}
-	DecryptedInheritanceOverrides       map[string]interface{}
+	ResponseWithTrustChain             *ResponseWithTrustChain
+	DecryptedEnvBytes                  []byte
+	DecryptedInheritanceOverridesBytes []byte
 }
 
 func (response *DecryptedVerifiedResponse) decryptEnv() error {
@@ -296,47 +281,53 @@ func (response *DecryptedVerifiedResponse) decryptEnv() error {
 		return errors.New("ResponseWithTrustChain required for decryption.")
 	}
 
-	// decrypt env
+	var err error
+
 	response.DecryptedEnvBytes, err = crypto.DecryptAndVerify(
 		[]byte(response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.Env),
 		response.ResponseWithTrustChain.ResponseWithKeys.SignerKeyring,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	response.DecryptedEnvString = string(decryptedEnvBytes)
 
 	return nil
 }
 
 func (response *DecryptedVerifiedResponse) decryptInheritanceOverrides() error {
-	reponse.DecryptedInheritanceBytes, err = crypto.DecryptAndVerify(
-		[]byte(response.ResponseWithKeys.RawResponse.InheritanceOverrides),
-		response.ResponseWithKeys.InheritanceSignerKeyring,
-	)
-	if err != nil {
-		return nil, err
+	if response.ResponseWithTrustChain == nil {
+		return errors.New("ResponseWithTrustChain required for decryption.")
 	}
 
-	response.DecryptedInheritanceOverridesString = string(response.DecryptedInheritanceBytes)
+	var err error
+
+	response.DecryptedInheritanceOverridesBytes, err = crypto.DecryptAndVerify(
+		[]byte(response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.InheritanceOverrides),
+		response.ResponseWithTrustChain.ResponseWithKeys.InheritanceSignerKeyring,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (response *DecryptedVerifiedResponse) checkEnvUrlPointer() error {
-	if response.DecryptedEnvString == "" {
+	decryptedEnvString := string(response.DecryptedEnvBytes)
+
+	if decryptedEnvString == "" {
 		return errors.New("env must first be decrypted before checking for url pointer.")
 	}
 
 	// if decrypted env is a simple string (not an object), treat as url pointer
-	if !strings.HasPrefix(decryptedVerified.DecryptedEnvString, "{") {
+	if strings.HasPrefix(decryptedEnvString, "\"") {
 		var err error
 		var body []byte
-		var r *http.Response
+		var url string
 
-		url := decryptedVerified.DecryptedEnvString
+		err = json.Unmarshal(response.DecryptedEnvBytes, &url)
+		r, err := httpGetter.Get(url)
 
-		getter := myhttp.New(time.Second * 2)
-		r, err = getter.Get(url)
 		if r != nil {
 			defer r.Body.Close()
 		}
@@ -352,26 +343,31 @@ func (response *DecryptedVerifiedResponse) checkEnvUrlPointer() error {
 			return err
 		}
 
-		response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.env = body
-		return response.decryptEnv()
+		response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.Env = string(body)
+		err = response.decryptEnv()
+
+		return err
 	}
+
+	return nil
 }
 
 func (response *DecryptedVerifiedResponse) checkInheritanceOverridesUrlPointer() error {
-	if response.DecryptedInheritanceOverridesString == "" {
+	decryptedInheritanceOverridesString := string(response.DecryptedInheritanceOverridesBytes)
+
+	if decryptedInheritanceOverridesString == "" {
 		return errors.New("inheritance overrides must first be decrypted before checking for url pointer.")
 	}
 
 	// if decrypted env is a simple string (not an object), treat as url pointer
-	if !strings.HasPrefix(decryptedVerified.DecryptedInheritanceOverridesString, "{") {
+	if strings.HasPrefix(decryptedInheritanceOverridesString, "\"") {
 		var err error
 		var body []byte
 		var r *http.Response
 
-		url := decryptedVerified.DecryptedInheritanceOverridesString
+		url := decryptedInheritanceOverridesString
 
-		getter := myhttp.New(time.Second * 2)
-		r, err = getter.Get(url)
+		r, err = httpGetter.Get(url)
 		if r != nil {
 			defer r.Body.Close()
 		}
@@ -387,33 +383,50 @@ func (response *DecryptedVerifiedResponse) checkInheritanceOverridesUrlPointer()
 			return err
 		}
 
-		response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.env = body
-		return response.decryptEnv()
+		response.ResponseWithTrustChain.ResponseWithKeys.RawResponse.InheritanceOverrides = string(body)
+		return response.decryptInheritanceOverrides()
 	}
 
+	return nil
 }
 
 func (response *DecryptedVerifiedResponse) toJson() (string, error) {
-	if response.DecryptedEnvString == "" {
-		envJson, err := json.Marshal(response.toMap())
+	if response.ResponseWithTrustChain.hasInheritanceOverrides() {
+		envMap, err := response.toMap()
+		if err != nil {
+			return "", err
+		}
+
+		envJson, err := json.Marshal(envMap)
 		if err != nil {
 			return "", err
 		}
 		return string(envJson), nil
 	} else {
-		return response.DecryptedEnvString, nil
+		return string(response.DecryptedEnvBytes), nil
 	}
 }
 
-func (response *DecryptedVerifiedResponse) toMap() map[string]interface{} {
-	if response.DecryptedEnvString != "" || response.DecryptedEnv == nil || response.DecryptedInheritanceOverrides == nil {
-		return nil
+func (response *DecryptedVerifiedResponse) toMap() (map[string]interface{}, error) {
+	var env map[string]interface{}
+	err := json.Unmarshal(response.DecryptedEnvBytes, &env)
+	if err != nil {
+		return nil, err
 	}
-	env := response.DecryptedEnv
-	for k, v := range response.DecryptedInheritanceOverrides {
-		env[k] = v
+
+	if response.ResponseWithTrustChain.hasInheritanceOverrides() {
+		var inheritanceOverrides map[string]interface{}
+		err = json.Unmarshal(response.DecryptedInheritanceOverridesBytes, &inheritanceOverrides)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range inheritanceOverrides {
+			env[k] = v
+		}
 	}
-	return env
+
+	return env, nil
 }
 
 func parseTrustedKeys(rawTrusted string, signerPubkey openpgp.EntityList) (trust.TrustedKeyablesMap, error) {
