@@ -19,21 +19,26 @@ import (
 )
 
 type FetchOptions struct {
-	ShouldCache   bool
-	CacheDir      string
-	ClientName    string
-	ClientVersion string
-	VerboseOutput bool
+	ShouldCache    bool
+	CacheDir       string
+	ClientName     string
+	ClientVersion  string
+	VerboseOutput  bool
+	TimeoutSeconds float64
 }
 
 var DefaultHost = "env.envkey.com"
 var BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
 var ApiVersion = 1
-var HttpGetter = myhttp.New(time.Second * 6)
+var HttpGetter = myhttp.New(time.Second * 2)
 
 func Fetch(envkey string, options FetchOptions) string {
 	if len(strings.Split(envkey, "-")) < 2 {
 		return "error: ENVKEY invalid"
+	}
+
+	if options.TimeoutSeconds != 2.0 {
+		HttpGetter = myhttp.New(time.Second * time.Duration(options.TimeoutSeconds))
 	}
 
 	var fetchCache *cache.Cache
