@@ -34,6 +34,7 @@ import (
 var cacheDir string
 var shouldCache bool
 var printVersion bool
+var verboseOutput bool
 var clientName string
 var clientVersion string
 
@@ -48,7 +49,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			res := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion})
+			res := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput})
 			fmt.Println(res)
 			if strings.HasPrefix(res, "error:") {
 				os.Exit(1)
@@ -74,4 +75,5 @@ func init() {
 	RootCmd.Flags().StringVar(&clientName, "client-name", "", "calling client library name (default is none)")
 	RootCmd.Flags().StringVar(&clientVersion, "client-version", "", "calling client library version (default is none)")
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
+	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
 }

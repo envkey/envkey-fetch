@@ -23,6 +23,7 @@ type FetchOptions struct {
 	CacheDir      string
 	ClientName    string
 	ClientVersion string
+	VerboseOutput bool
 }
 
 var DefaultHost = "env.envkey.com"
@@ -46,8 +47,17 @@ func Fetch(envkey string, options FetchOptions) string {
 	if err != nil {
 		return "error: " + err.Error()
 	}
+
+	if options.VerboseOutput {
+		fmt.Println("Parsing and decrypting response...")
+	}
 	res, err := response.Parse(pw)
 	if err != nil {
+		if options.VerboseOutput {
+			fmt.Println("Error parsing and decrypting:")
+			fmt.Println(err)
+		}
+
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
 		}
@@ -63,6 +73,22 @@ func Fetch(envkey string, options FetchOptions) string {
 	}
 
 	return res
+}
+
+func logRequestIfVerbose(url string, options FetchOptions, err error, r *http.Response) {
+	if options.VerboseOutput {
+		if err != nil {
+			fmt.Printf("Loading from %s failed.\n", url)
+			fmt.Println("Error:")
+			fmt.Println(err)
+		} else if r.StatusCode > 500 {
+			fmt.Printf("Loading from %s failed.\n", url)
+			fmt.Println("Response status:")
+			fmt.Println(string(r.StatusCode))
+		} else {
+			fmt.Printf("Loaded from %s successfully.\n", url)
+		}
+	}
 }
 
 func fetchEnv(envkey string, options FetchOptions, fetchCache *cache.Cache) (*parser.EnvServiceResponse, string, string, error) {
@@ -146,19 +172,37 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 		defer r.Body.Close()
 	}
 
+	if options.VerboseOutput {
+		fmt.Printf("Attempting to load encrypted config from default url: %s\n", url)
+	}
+
 	// If http request failed and we're using the default host, now try backup host
 	if err != nil || r.StatusCode >= 500 {
+		logRequestIfVerbose(url, options, err, r)
+
 		if envkeyHost == "" || envkeyHost == DefaultHost {
-			r, err = HttpGetter.Get(getBackupUrl(envkeyParam))
+			backupUrl := getBackupUrl(envkeyParam)
+
+			if options.VerboseOutput {
+				fmt.Printf("Attempting to load encrypted config from backup url: %s\n", url)
+			}
+
+			r, err = HttpGetter.Get(backupUrl)
 			if r != nil {
 				defer r.Body.Close()
 			}
+
+			logRequestIfVerbose(url, options, err, r)
 		}
 	}
 
 	if err == nil && r.StatusCode == 200 {
 		body, err = ioutil.ReadAll(r.Body)
 		if err != nil {
+			if options.VerboseOutput {
+				fmt.Println("Error reading response body:")
+				fmt.Println(err)
+			}
 			return err
 		}
 	} else if err != nil || r.StatusCode >= 500 {
@@ -172,6 +216,10 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 		} else {
 			body, err = fetchCache.Read(envkeyParam)
 			if err != nil {
+				if options.VerboseOutput {
+					fmt.Println("Cache read error:")
+					fmt.Println(err)
+				}
 				return errors.New("could not load from server, s3 backup, or cache.")
 			}
 		}
