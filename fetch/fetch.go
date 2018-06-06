@@ -29,7 +29,7 @@ type FetchOptions struct {
 var DefaultHost = "env.envkey.com"
 var BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
 var ApiVersion = 1
-var HttpGetter = myhttp.New(time.Second * 2)
+var HttpGetter = myhttp.New(time.Second * 6)
 
 func Fetch(envkey string, options FetchOptions) string {
 	if len(strings.Split(envkey, "-")) < 2 {
@@ -184,7 +184,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			backupUrl := getBackupUrl(envkeyParam)
 
 			if options.VerboseOutput {
-				fmt.Printf("Attempting to load encrypted config from backup url: %s\n", url)
+				fmt.Printf("Attempting to load encrypted config from backup url: %s\n", backupUrl)
 			}
 
 			r, err = HttpGetter.Get(backupUrl)
@@ -192,7 +192,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 				defer r.Body.Close()
 			}
 
-			logRequestIfVerbose(url, options, err, r)
+			logRequestIfVerbose(backupUrl, options, err, r)
 		}
 	}
 
