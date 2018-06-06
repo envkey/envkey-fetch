@@ -52,6 +52,7 @@ error: ENVKEY invalid
 -h, --help               help for envkey-fetch
 -v, --version            prints the version
     --verbose            print verbose output (default is false)
+    --timeout float      timeout in seconds for http requests (default 2)
 ```
 
 ## Further Reading
