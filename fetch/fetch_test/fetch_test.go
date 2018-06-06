@@ -101,7 +101,7 @@ func TestFetch(t *testing.T) {
 			httpmock.NewStringResponder(test.responseStatus, test.response),
 		)
 
-		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{true, "", "envkey-fetch", version.Version}), test.desc)
+		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false}), test.desc)
 
 		// Test caching
 		var c *cache.Cache
@@ -118,7 +118,7 @@ func TestFetch(t *testing.T) {
 		}
 
 		// With caching disabled
-		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version}), test.desc)
+		assert.Equal(test.expectedResult, fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false}), test.desc)
 
 		// Ensure no caching
 		c, _ = cache.NewCache("")
@@ -135,11 +135,11 @@ func TestLiveFetch(t *testing.T) {
 	assert := assert.New(t)
 
 	// Test valid
-	validRes := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version})
+	validRes := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false})
 	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\"}", validRes)
 
 	// Test invalid
-	invalidRes := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version})
+	invalidRes := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false})
 	assert.Equal("error: ENVKEY invalid", invalidRes)
 
 }
@@ -159,7 +159,7 @@ func TestBackup(t *testing.T) {
 		httpmock.NewStringResponder(200, responseSimple),
 	)
 
-	assert.Equal(validResult, fetch.Fetch(validEnvkeySimple, fetch.FetchOptions{false, "", "envkey-fetch", version.Version}), "Backup")
+	assert.Equal(validResult, fetch.Fetch(validEnvkeySimple, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false}), "Backup")
 }
 
 const customRemoteHost = "env-service.customhost.com"
