@@ -51,6 +51,7 @@ error: ENVKEY invalid
     --cache-dir string   cache directory (default is $HOME/.envkey/cache)
 -h, --help               help for envkey-fetch
 -v, --version            prints the version
+    --verbose            print verbose output (default is false)
 ```
 
 ## Further Reading
