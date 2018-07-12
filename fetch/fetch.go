@@ -86,7 +86,7 @@ func logRequestIfVerbose(url string, options FetchOptions, err error, r *http.Re
 			fmt.Printf("Loading from %s failed.\n", url)
 			fmt.Println("Error:")
 			fmt.Println(err)
-		} else if r.StatusCode > 500 {
+		} else if r.StatusCode >= 500 {
 			fmt.Printf("Loading from %s failed.\n", url)
 			fmt.Println("Response status:")
 			fmt.Println(string(r.StatusCode))
