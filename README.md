@@ -61,11 +61,8 @@ error: ENVKEY invalid
     --cache-dir string   cache directory (default is $HOME/.envkey/cache)
 -h, --help               help for envkey-fetch
 -v, --version            prints the version
-<<<<<<< HEAD
-=======
     --verbose            print verbose output (default is false)
     --timeout float      timeout in seconds for http requests (default 2)
->>>>>>> master
 ```
 
 ## Further Reading
