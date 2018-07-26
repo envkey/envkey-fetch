@@ -24,6 +24,16 @@ Find the [release](https://github.com/envkey/envkey-fetch/releases) for your pla
 
 With Go installed, clone the project into your `GOPATH`. `cd` into the directory and run `go get` and `go build`.
 
+**Cross-compile from source:**
+
+To compile cross-platform binaries, make sure Go is installed, then install [goreleaser](https://goreleaser.com/) - follow instructions in the docs to do so.
+
+Then to cross-compile, run:
+
+`goreleaser`
+
+Binaries for each platform will be output to the `dist` folder.
+
 ## Usage
 
 ```bash
