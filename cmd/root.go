@@ -23,6 +23,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/envkey/envkey-fetch/fetch"
 	"github.com/envkey/envkey-fetch/version"
@@ -33,8 +34,10 @@ import (
 var cacheDir string
 var shouldCache bool
 var printVersion bool
+var verboseOutput bool
 var clientName string
 var clientVersion string
+var timeoutSeconds float64
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -47,7 +50,11 @@ var RootCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			fmt.Println(fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion}))
+			res := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds})
+			fmt.Println(res)
+			if strings.HasPrefix(res, "error:") {
+				os.Exit(1)
+			}
 		} else {
 			cmd.Help()
 		}
@@ -69,4 +76,6 @@ func init() {
 	RootCmd.Flags().StringVar(&clientName, "client-name", "", "calling client library name (default is none)")
 	RootCmd.Flags().StringVar(&clientVersion, "client-version", "", "calling client library version (default is none)")
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
+	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
+	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 2.0, "timeout in seconds for http requests")
 }

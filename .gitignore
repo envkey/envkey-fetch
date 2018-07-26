@@ -5,3 +5,4 @@
 
 ./envkey-fetch
 .ghtoken
+dist/

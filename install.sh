@@ -42,9 +42,9 @@ welcome_envkey () {
 
 download_envkey () {
   echo "Downloading envkey-fetch binary for ${PLATFORM}-${ARCH}"
-  url="https://raw.githubusercontent.com/envkey/envkey-fetch/master/dist/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
+  url="https://github.com/envkey/envkey-fetch/releases/download/v${VERSION}/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
   echo "Downloading tarball from ${url}"
-  curl -s -o envkey-fetch.tar.gz "${url}"
+  curl -s -L -o envkey-fetch.tar.gz "${url}"
 
   tar zxf envkey-fetch.tar.gz envkey-fetch.exe 2> /dev/null
   tar zxf envkey-fetch.tar.gz envkey-fetch 2> /dev/null
