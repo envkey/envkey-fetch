@@ -23,7 +23,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/envkey/envkey-fetch/fetch"
 	"github.com/envkey/envkey-fetch/version"
@@ -50,10 +49,12 @@ var RootCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			res := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds})
-			fmt.Println(res)
-			if strings.HasPrefix(res, "error:") {
+			res, err := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "error: "+err.Error())
 				os.Exit(1)
+			} else {
+				fmt.Println(res)
 			}
 		} else {
 			cmd.Help()
