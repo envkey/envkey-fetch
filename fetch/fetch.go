@@ -223,7 +223,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 		}
 	}
 
-	if backupFetchErr == nil && r.StatusCode == 200 {
+	if backupFetchErr == nil && (r != nil && r.StatusCode == 200) {
 		body, err = ioutil.ReadAll(r.Body)
 		if err != nil {
 			if options.VerboseOutput {
@@ -232,7 +232,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			}
 			return err
 		}
-	} else if backupFetchErr != nil || r.StatusCode >= 500 {
+	} else if backupFetchErr != nil || (r != nil && r.StatusCode >= 500) {
 		// try loading from cache
 		if fetchCache == nil {
 			if backupFetchErr == nil {
@@ -251,7 +251,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			}
 		}
 
-	} else if r.StatusCode == 404 {
+	} else if r != nil && r.StatusCode == 404 {
 		// Since envkey wasn't found and permission may have been removed, clear cache
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
