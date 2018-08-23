@@ -1,6 +1,7 @@
 package fetch
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/certifi/gocertifi"
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/parser"
 	"github.com/envkey/envkey-fetch/version"
@@ -79,6 +81,25 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 	}
 
 	return res, nil
+}
+
+func httpGet(url string) (*http.Response, error) {
+	r, err := HttpGetter.Get(url)
+
+	// if error caused by missing root certificates, pull in gocertifi certs (which come from Mozilla) and try again with those
+	if err != nil && strings.Contains(err.Error(), "x509: failed to load system roots") {
+		certPool, err := gocertifi.CACerts()
+		if err != nil {
+			return nil, err
+		}
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{RootCAs: certPool},
+		}
+		HttpGetter.Client.Transport = transport
+		return HttpGetter.Get(url)
+	} else {
+		return r, err
+	}
 }
 
 func logRequestIfVerbose(url string, options FetchOptions, err error, r *http.Response) {
@@ -167,13 +188,13 @@ func getBackupUrl(envkeyParam string) string {
 }
 
 func getJson(envkeyHost string, envkeyParam string, options FetchOptions, response *parser.EnvServiceResponse, fetchCache *cache.Cache) error {
-	var err error
+	var err, fetchErr, backupFetchErr error
 	var body []byte
 	var r *http.Response
 
 	url := getJsonUrl(envkeyHost, envkeyParam, options)
 
-	r, err = HttpGetter.Get(url)
+	r, fetchErr = httpGet(url)
 	if r != nil {
 		defer r.Body.Close()
 	}
@@ -183,8 +204,8 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 	}
 
 	// If http request failed and we're using the default host, now try backup host
-	if err != nil || r.StatusCode >= 500 {
-		logRequestIfVerbose(url, options, err, r)
+	if fetchErr != nil || r.StatusCode >= 500 {
+		logRequestIfVerbose(url, options, fetchErr, r)
 
 		if envkeyHost == "" || envkeyHost == DefaultHost {
 			backupUrl := getBackupUrl(envkeyParam)
@@ -193,16 +214,16 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 				fmt.Fprintf(os.Stderr, "Attempting to load encrypted config from backup url: %s\n", backupUrl)
 			}
 
-			r, err = HttpGetter.Get(backupUrl)
+			r, backupFetchErr = httpGet(backupUrl)
 			if r != nil {
 				defer r.Body.Close()
 			}
 
-			logRequestIfVerbose(backupUrl, options, err, r)
+			logRequestIfVerbose(backupUrl, options, backupFetchErr, r)
 		}
 	}
 
-	if err == nil && r.StatusCode == 200 {
+	if backupFetchErr == nil && r.StatusCode == 200 {
 		body, err = ioutil.ReadAll(r.Body)
 		if err != nil {
 			if options.VerboseOutput {
@@ -211,13 +232,13 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			}
 			return err
 		}
-	} else if err != nil || r.StatusCode >= 500 {
+	} else if backupFetchErr != nil || r.StatusCode >= 500 {
 		// try loading from cache
 		if fetchCache == nil {
-			if err == nil {
-				return errors.New("server error.")
+			if backupFetchErr == nil {
+				return errors.New("could not load from server or s3 backup.")
 			} else {
-				return err
+				return errors.New("could not load from server or s3 backup.\n\nfetch error: " + fetchErr.Error() + "\n\nbackup fetch error: " + backupFetchErr.Error())
 			}
 		} else {
 			body, err = fetchCache.Read(envkeyParam)
@@ -226,7 +247,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 					fmt.Fprintln(os.Stderr, "Cache read error:")
 					fmt.Fprintln(os.Stderr, err)
 				}
-				return errors.New("could not load from server, s3 backup, or cache.")
+				return errors.New("could not load from server, s3 backup, or cache.\n\nfetch error: " + fetchErr.Error() + "\n\nbackup fetch error: " + backupFetchErr.Error() + "\n\ncache read error:" + err.Error())
 			}
 		}
 
