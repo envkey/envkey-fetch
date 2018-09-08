@@ -33,14 +33,14 @@ type FetchOptions struct {
 var DefaultHost = "env.envkey.com"
 var BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
 var ApiVersion = 1
-var HttpGetter = myhttp.New(time.Second * 2)
+var HttpGetter = myhttp.New(time.Second * 6)
 
 func Fetch(envkey string, options FetchOptions) (string, error) {
 	if len(strings.Split(envkey, "-")) < 2 {
 		return "", errors.New("ENVKEY invalid")
 	}
 
-	if options.TimeoutSeconds != 2.0 {
+	if options.TimeoutSeconds != 6.0 {
 		HttpGetter = myhttp.New(time.Second * time.Duration(options.TimeoutSeconds))
 	}
 
@@ -146,7 +146,7 @@ func getBaseUrl(envkeyHost string, envkeyParam string) string {
 		host = envkeyHost
 	}
 
-	if strings.Contains(host, "localhost") {
+	if strings.Split(host, ":")[0] == "localhost" {
 		protocol = "http://"
 	} else {
 		protocol = "https://"
