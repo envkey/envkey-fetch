@@ -146,7 +146,9 @@ func getBaseUrl(envkeyHost string, envkeyParam string) string {
 		host = envkeyHost
 	}
 
-	if strings.Split(host, ":")[0] == "localhost" {
+	hostSplit := strings.Split(host, ":")
+
+	if len(hostSplit) > 0 && hostSplit[0] == "localhost" {
 		protocol = "http://"
 	} else {
 		protocol = "https://"
