@@ -83,7 +83,7 @@ func TestFetch(t *testing.T) {
 		var envkeyParam = strings.Split(test.envkey, "-")[0]
 
 		baseUrl := (test.protocol + "://" + test.host + "/v" + strconv.Itoa(fetch.ApiVersion) + "/" + envkeyParam)
-		opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0}
+		opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 6.0}
 		url := fetch.UrlWithLoggingParams(baseUrl, opts)
 
 		fmt.Println("TestFetch url:")
@@ -119,7 +119,7 @@ func TestFetch(t *testing.T) {
 			assert.NotNil(err, "Should not cache the response.")
 		}
 
-		res, err = fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+		res, err = fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 6.0})
 
 		// With caching disabled
 		if test.expectErr {
@@ -144,12 +144,12 @@ func TestLiveFetch(t *testing.T) {
 	assert := assert.New(t)
 
 	// Test valid
-	validRes, err := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+	validRes, err := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 6.0})
 	assert.Nil(err)
 	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\"}", validRes)
 
 	// Test invalid
-	invalidRes, err := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+	invalidRes, err := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 6.0})
 	assert.NotNil(err)
 	assert.Equal("ENVKEY invalid", string(err.Error()))
 	assert.Equal("", invalidRes)
@@ -162,7 +162,7 @@ func TestBackup(t *testing.T) {
 
 	// Test with backup
 	fetch.DefaultHost = "localhost:61034"
-	opts := fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0}
+	opts := fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 6.0}
 	url := fetch.UrlWithLoggingParams("https://"+fetch.BackupHost+"/v"+strconv.Itoa(fetch.ApiVersion)+"/validkey", opts)
 	restrictedUrl := fetch.UrlWithLoggingParams(fmt.Sprintf("%s?v=%s&id=%s", ("https://"+fetch.BackupHostRestricted), strconv.Itoa(fetch.ApiVersion), "validkey"), opts)
 
