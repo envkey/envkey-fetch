@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/certifi/gocertifi"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/parser"
 	"github.com/envkey/envkey-fetch/version"
 	"github.com/envkey/myhttp"
+	multierror "github.com/hashicorp/go-multierror"
 )
 
 type FetchOptions struct {
@@ -31,7 +33,8 @@ type FetchOptions struct {
 }
 
 var DefaultHost = "env.envkey.com"
-var BackupDefaultHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
+var BackupHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
+var BackupHostRestricted = "me66hg5t17.execute-api.eu-west-1.amazonaws.com/default/envBackup"
 var ApiVersion = 1
 var HttpGetter = myhttp.New(time.Second * 6)
 
@@ -83,7 +86,40 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 	return res, nil
 }
 
+func UrlWithLoggingParams(baseUrl string, options FetchOptions) string {
+	clientName := options.ClientName
+	if clientName == "" {
+		clientName = "envkey-fetch"
+	}
+
+	clientVersion := options.ClientVersion
+	if clientVersion == "" {
+		clientVersion = version.Version
+	}
+
+	var querySep string
+	if strings.Contains(baseUrl, "?") {
+		querySep = "&"
+	} else {
+		querySep = "?"
+	}
+
+	fmtStr := "%s%sclientName=%s&clientVersion=%s&clientOs=%s&clientArch=%s"
+	return fmt.Sprintf(
+		fmtStr,
+		baseUrl,
+		querySep,
+		url.QueryEscape(clientName),
+		url.QueryEscape(clientVersion),
+		url.QueryEscape(runtime.GOOS),
+		url.QueryEscape(runtime.GOARCH),
+	)
+}
+
 func httpGet(url string) (*http.Response, error) {
+	fmt.Println("httpGet:")
+	fmt.Println(url)
+
 	r, err := HttpGetter.Get(url)
 
 	// if error caused by missing root certificates, pull in gocertifi certs (which come from Mozilla) and try again with those
@@ -158,33 +194,53 @@ func getBaseUrl(envkeyHost string, envkeyParam string) string {
 
 func getJsonUrl(envkeyHost string, envkeyParam string, options FetchOptions) string {
 	baseUrl := getBaseUrl(envkeyHost, envkeyParam)
-
-	clientName := options.ClientName
-	if clientName == "" {
-		clientName = "envkey-fetch"
-	}
-
-	clientVersion := options.ClientVersion
-	if clientVersion == "" {
-		clientVersion = version.Version
-	}
-
-	fmtStr := "%s?clientName=%s&clientVersion=%s&clientOs=%s&clientArch=%s"
-	return fmt.Sprintf(
-		fmtStr,
-		baseUrl,
-		url.QueryEscape(clientName),
-		url.QueryEscape(clientVersion),
-		url.QueryEscape(runtime.GOOS),
-		url.QueryEscape(runtime.GOARCH),
-	)
+	return UrlWithLoggingParams(baseUrl, options)
 }
 
-func getBackupUrl(envkeyParam string) string {
-	host := BackupDefaultHost
+func getBackupUrls(envkeyParam string) []string {
 	protocol := "https://"
-	apiVersion := "v" + strconv.Itoa(ApiVersion)
-	return strings.Join([]string{protocol + host, apiVersion, envkeyParam}, "/")
+	apiVersion := strconv.Itoa(ApiVersion)
+	return []string{
+		strings.Join([]string{protocol + BackupHost, "v" + apiVersion, envkeyParam}, "/"),
+		fmt.Sprintf("%s?v=%s&id=%s", protocol+BackupHostRestricted, apiVersion, envkeyParam),
+	}
+}
+
+func fetchBackup(envkeyParam string, options FetchOptions) (*http.Response, error) {
+	backupUrls := getBackupUrls(envkeyParam)
+
+	if options.VerboseOutput {
+		fmt.Fprintf(os.Stderr, "Attempting to load encrypted config from backup urls: %s\n", backupUrls)
+	}
+
+	success, failed := make(chan *http.Response), make(chan error)
+
+	for _, backupUrl := range backupUrls {
+		go func(backupUrl string) {
+			urlWithParams := UrlWithLoggingParams(backupUrl, options)
+			r, err := httpGet(urlWithParams)
+			logRequestIfVerbose(urlWithParams, options, err, r)
+			if err == nil {
+				success <- r
+			} else {
+				failed <- err
+			}
+		}(backupUrl)
+	}
+
+	var err error
+
+	for {
+		r, any := <-success
+
+		if any {
+			return r, nil
+		} else {
+			err = multierror.Append(err, <-failed)
+		}
+	}
+
+	return nil, err
 }
 
 func getJson(envkeyHost string, envkeyParam string, options FetchOptions, response *parser.EnvServiceResponse, fetchCache *cache.Cache) error {
@@ -203,28 +259,28 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 		fmt.Fprintf(os.Stderr, "Attempting to load encrypted config from default url: %s\n", url)
 	}
 
-	// If http request failed and we're using the default host, now try backup host
+	// If http request failed and we're using the default host, now try backup hosts
 	if fetchErr != nil || r.StatusCode >= 500 {
 		logRequestIfVerbose(url, options, fetchErr, r)
 
 		if envkeyHost == "" || envkeyHost == DefaultHost {
-			backupUrl := getBackupUrl(envkeyParam)
+			r, backupFetchErr = fetchBackup(envkeyParam, options)
 
-			if options.VerboseOutput {
-				fmt.Fprintf(os.Stderr, "Attempting to load encrypted config from backup url: %s\n", backupUrl)
-			}
-
-			r, backupFetchErr = httpGet(backupUrl)
 			if r != nil {
 				defer r.Body.Close()
 			}
 
-			logRequestIfVerbose(backupUrl, options, backupFetchErr, r)
+			fmt.Println("backupFetchErr")
+			spew.Dump(backupFetchErr)
+			fmt.Println("r.StatusCode")
+			spew.Dump(r.StatusCode)
+
 		}
 	}
 
 	if backupFetchErr == nil && (r != nil && r.StatusCode == 200) {
 		body, err = ioutil.ReadAll(r.Body)
+
 		if err != nil {
 			if options.VerboseOutput {
 				fmt.Fprintln(os.Stderr, "Error reading response body:")

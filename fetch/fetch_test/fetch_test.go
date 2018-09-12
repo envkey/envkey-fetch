@@ -2,8 +2,6 @@ package fetch_test
 
 import (
 	"fmt"
-	"net/url"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -85,14 +83,11 @@ func TestFetch(t *testing.T) {
 		var envkeyParam = strings.Split(test.envkey, "-")[0]
 
 		baseUrl := (test.protocol + "://" + test.host + "/v" + strconv.Itoa(fetch.ApiVersion) + "/" + envkeyParam)
-		fmtStr := "%s?clientName=envkey-fetch&clientVersion=%s&clientOs=%s&clientArch=%s"
-		url := fmt.Sprintf(
-			fmtStr,
-			baseUrl,
-			url.QueryEscape(version.Version),
-			url.QueryEscape(runtime.GOOS),
-			url.QueryEscape(runtime.GOARCH),
-		)
+		opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0}
+		url := fetch.UrlWithLoggingParams(baseUrl, opts)
+
+		fmt.Println("TestFetch url:")
+		fmt.Println(url)
 
 		httpmock.RegisterResponder(
 			"GET",
@@ -100,7 +95,7 @@ func TestFetch(t *testing.T) {
 			httpmock.NewStringResponder(test.responseStatus, test.response),
 		)
 
-		res, err := fetch.Fetch(test.envkey, fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0})
+		res, err := fetch.Fetch(test.envkey, opts)
 
 		if test.expectErr {
 			assert.NotNil(err)
@@ -167,7 +162,12 @@ func TestBackup(t *testing.T) {
 
 	// Test with backup
 	fetch.DefaultHost = "localhost:61034"
-	url := ("https://" + fetch.BackupDefaultHost + "/v" + strconv.Itoa(fetch.ApiVersion) + "/validkey")
+	opts := fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0}
+	url := fetch.UrlWithLoggingParams("https://"+fetch.BackupHost+"/v"+strconv.Itoa(fetch.ApiVersion)+"/validkey", opts)
+	restrictedUrl := fetch.UrlWithLoggingParams(fmt.Sprintf("%s?v=%s&id=%s", ("https://"+fetch.BackupHostRestricted), strconv.Itoa(fetch.ApiVersion), "validkey"), opts)
+
+	fmt.Println(url)
+	fmt.Println(restrictedUrl)
 
 	httpmock.RegisterResponder(
 		"GET",
@@ -175,7 +175,13 @@ func TestBackup(t *testing.T) {
 		httpmock.NewStringResponder(200, responseSimple),
 	)
 
-	res, err := fetch.Fetch(validEnvkeySimple, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+	httpmock.RegisterResponder(
+		"GET",
+		restrictedUrl,
+		httpmock.NewStringResponder(200, responseSimple),
+	)
+
+	res, err := fetch.Fetch(validEnvkeySimple, opts)
 
 	assert.Nil(err)
 	assert.Equal(validResult, res, "Backup")
