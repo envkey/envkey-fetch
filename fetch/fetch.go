@@ -1,11 +1,13 @@
 package fetch
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,11 +17,9 @@ import (
 	"time"
 
 	"github.com/certifi/gocertifi"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/parser"
 	"github.com/envkey/envkey-fetch/version"
-	"github.com/envkey/myhttp"
 	multierror "github.com/hashicorp/go-multierror"
 )
 
@@ -36,15 +36,27 @@ var DefaultHost = "env.envkey.com"
 var BackupHost = "s3-eu-west-1.amazonaws.com/envkey-backup/envs"
 var BackupHostRestricted = "me66hg5t17.execute-api.eu-west-1.amazonaws.com/default/envBackup"
 var ApiVersion = 1
-var HttpGetter = myhttp.New(time.Second * 6)
+
+var Client *http.Client
+
+type httpChannelResponse struct {
+	response *http.Response
+	url      string
+}
+
+type httpChannelErr struct {
+	err error
+	url string
+}
 
 func Fetch(envkey string, options FetchOptions) (string, error) {
 	if len(strings.Split(envkey, "-")) < 2 {
 		return "", errors.New("ENVKEY invalid")
 	}
 
-	if options.TimeoutSeconds != 6.0 {
-		HttpGetter = myhttp.New(time.Second * time.Duration(options.TimeoutSeconds))
+	// may be initalized already when mocking for tests
+	if Client == nil {
+		InitHttpClient(options.TimeoutSeconds)
 	}
 
 	var fetchCache *cache.Cache
@@ -116,25 +128,78 @@ func UrlWithLoggingParams(baseUrl string, options FetchOptions) string {
 	)
 }
 
-func httpGet(url string) (*http.Response, error) {
-	fmt.Println("httpGet:")
-	fmt.Println(url)
+func InitHttpClient(timeoutSeconds float64) {
+	// http.Client.Get reuses the transport. this should be created once.
+	tp := http.Transport{}
+	to := time.Second * time.Duration(timeoutSeconds)
 
-	r, err := HttpGetter.Get(url)
+	tp.DialContext = (&net.Dialer{
+		Timeout: to,
+	}).DialContext
 
-	// if error caused by missing root certificates, pull in gocertifi certs (which come from Mozilla) and try again with those
-	if err != nil && strings.Contains(err.Error(), "x509: failed to load system roots") {
-		certPool, err := gocertifi.CACerts()
-		if err != nil {
-			return nil, err
-		}
-		transport := &http.Transport{
-			TLSClientConfig: &tls.Config{RootCAs: certPool},
-		}
-		HttpGetter.Client.Transport = transport
-		return HttpGetter.Get(url)
+	tp.TLSHandshakeTimeout = to
+	tp.ResponseHeaderTimeout = to
+	tp.ExpectContinueTimeout = to
+
+	Client = &http.Client{
+		Transport: &tp,
+	}
+}
+
+func httpExecRequest(
+	req *http.Request,
+	respChan chan httpChannelResponse,
+	errChan chan httpChannelErr,
+) {
+	resp, err := Client.Do(req)
+	if err == nil {
+		respChan <- httpChannelResponse{resp, req.URL.String()}
 	} else {
-		return r, err
+		// if error caused by missing root certificates, pull in gocertifi certs (which come from Mozilla) and try again with those
+		if strings.Contains(err.Error(), "x509: failed to load system roots") {
+			certPool, certPoolErr := gocertifi.CACerts()
+			if certPoolErr != nil {
+				errChan <- httpChannelErr{multierror.Append(err, certPoolErr), req.URL.String()}
+				return
+			}
+			Client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{RootCAs: certPool}
+			httpExecRequest(req, respChan, errChan)
+		} else {
+			errChan <- httpChannelErr{err, req.URL.String()}
+		}
+	}
+}
+
+func httpGetAsync(
+	url string,
+	ctx context.Context,
+	respChan chan httpChannelResponse,
+	errChan chan httpChannelErr,
+) {
+	req, err := http.NewRequest("GET", url, nil)
+
+	if err != nil {
+		errChan <- httpChannelErr{err, url}
+		return
+	}
+
+	req = req.WithContext(ctx)
+
+	go httpExecRequest(req, respChan, errChan)
+}
+
+func httpGet(url string) (*http.Response, error) {
+	respChan, errChan := make(chan httpChannelResponse), make(chan httpChannelErr)
+
+	httpGetAsync(url, context.Background(), respChan, errChan)
+
+	for {
+		select {
+		case channelResp := <-respChan:
+			return channelResp.response, nil
+		case channelErr := <-errChan:
+			return nil, channelErr.err
+		}
 	}
 }
 
@@ -215,30 +280,36 @@ func fetchBackup(envkeyParam string, options FetchOptions) (*http.Response, erro
 		fmt.Fprintf(os.Stderr, "Attempting to load encrypted config from backup urls: %s\n", backupUrls)
 	}
 
-	success, failed := make(chan *http.Response), make(chan error)
+	respChan, errChan := make(chan httpChannelResponse), make(chan httpChannelErr)
+
+	cancelFnByUrl := map[string]context.CancelFunc{}
 
 	for _, backupUrl := range backupUrls {
-		go func(backupUrl string) {
-			urlWithParams := UrlWithLoggingParams(backupUrl, options)
-			r, err := httpGet(urlWithParams)
-			logRequestIfVerbose(urlWithParams, options, err, r)
-			if err == nil {
-				success <- r
-			} else {
-				failed <- err
-			}
-		}(backupUrl)
+		ctx, cancel := context.WithCancel(context.Background())
+		urlWithParams := UrlWithLoggingParams(backupUrl, options)
+		cancelFnByUrl[urlWithParams] = cancel
+		httpGetAsync(urlWithParams, ctx, respChan, errChan)
 	}
 
 	var err error
-
 	for {
-		r, any := <-success
+		channelResp, any := <-respChan
 
 		if any {
-			return r, nil
+			logRequestIfVerbose(channelResp.url, options, nil, channelResp.response)
+
+			// cancel other requests
+			for backupUrl, cancel := range cancelFnByUrl {
+				if backupUrl != channelResp.url {
+					cancel()
+				}
+			}
+
+			return channelResp.response, nil
 		} else {
-			err = multierror.Append(err, <-failed)
+			channelErr := <-errChan
+			logRequestIfVerbose(channelErr.url, options, channelErr.err, nil)
+			err = multierror.Append(err, channelErr.err)
 		}
 	}
 
@@ -271,12 +342,6 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			if r != nil {
 				defer r.Body.Close()
 			}
-
-			fmt.Println("backupFetchErr")
-			spew.Dump(backupFetchErr)
-			fmt.Println("r.StatusCode")
-			spew.Dump(r.StatusCode)
-
 		}
 	}
 
