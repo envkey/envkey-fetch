@@ -134,9 +134,9 @@ func TestFetch(t *testing.T) {
 	}
 }
 
-const VALID_LIVE_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2o-env-staging.envkey.com"
-const INVALID_LIVE_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2oinvalid-env-staging.envkey.com"
-const BACKUP_TEST_ENVKEY = "Emzt4BE7C23QtsC7gb1z-3NvfNiG1Boy6XH2o"
+const VALID_LIVE_ENVKEY = "wYv78UmHsfEu6jSqMZrU-3w1kwyF35nRYwsAJ-env-staging.envkey.com"
+const INVALID_LIVE_ENVKEY = "wYv78UmHsfEu6jSqMZrU-3w1kwyF35nRYwsAJinvalid-env-staging.envkey.com"
+const BACKUP_TEST_ENVKEY = "wYv78UmHsfEu6jSqMZrU-3w1kwyF35nRYwsAJ"
 
 func TestLiveFetch(t *testing.T) {
 	assert := assert.New(t)
