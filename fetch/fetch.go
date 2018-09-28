@@ -60,10 +60,19 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 	}
 
 	var fetchCache *cache.Cache
+	var cacheErr error
 
 	if options.ShouldCache {
+		if options.VerboseOutput {
+			fmt.Fprintf(os.Stderr, "Initializing cache at %s", options.CacheDir)
+		}
+
 		// If initializing cache fails for some reason, ignore and let it be nil
-		fetchCache, _ = cache.NewCache(options.CacheDir)
+		fetchCache, cacheErr = cache.NewCache(options.CacheDir)
+
+		if options.VerboseOutput {
+			fmt.Fprintf(os.Stderr, "Error initializing cache: %s", cacheErr.Error())
+		}
 	}
 
 	response, envkeyParam, pw, err := fetchEnv(envkey, options, fetchCache)
@@ -292,10 +301,10 @@ func fetchBackup(envkeyParam string, options FetchOptions) (*http.Response, erro
 	}
 
 	var err error
+	numErrs := 0
 	for {
-		channelResp, any := <-respChan
-
-		if any {
+		select {
+		case channelResp := <-respChan:
 			logRequestIfVerbose(channelResp.url, options, nil, channelResp.response)
 
 			// cancel other requests
@@ -306,14 +315,15 @@ func fetchBackup(envkeyParam string, options FetchOptions) (*http.Response, erro
 			}
 
 			return channelResp.response, nil
-		} else {
-			channelErr := <-errChan
-			logRequestIfVerbose(channelErr.url, options, channelErr.err, nil)
+		case channelErr := <-errChan:
 			err = multierror.Append(err, channelErr.err)
+			numErrs++
+			if numErrs == len(backupUrls) {
+				logRequestIfVerbose(channelErr.url, options, channelErr.err, nil)
+				return nil, err
+			}
 		}
 	}
-
-	return nil, err
 }
 
 func getJson(envkeyHost string, envkeyParam string, options FetchOptions, response *parser.EnvServiceResponse, fetchCache *cache.Cache) error {
@@ -361,7 +371,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			if backupFetchErr == nil {
 				return errors.New("could not load from server or s3 backup.")
 			} else {
-				return errors.New("could not load from server or s3 backup.\n\nfetch error: " + fetchErr.Error() + "\n\nbackup fetch error: " + backupFetchErr.Error())
+				return errors.New("could not load from server or s3 backup.\nfetch error: " + fetchErr.Error() + "\nbackup fetch error: " + backupFetchErr.Error())
 			}
 		} else {
 			body, err = fetchCache.Read(envkeyParam)
@@ -370,7 +380,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 					fmt.Fprintln(os.Stderr, "Cache read error:")
 					fmt.Fprintln(os.Stderr, err)
 				}
-				return errors.New("could not load from server, s3 backup, or cache.\n\nfetch error: " + fetchErr.Error() + "\n\nbackup fetch error: " + backupFetchErr.Error() + "\n\ncache read error:" + err.Error())
+				return errors.New("could not load from server, s3 backup, or cache.\nfetch error: " + fetchErr.Error() + "\nbackup fetch error: " + backupFetchErr.Error() + "\ncache read error: " + err.Error())
 			}
 		}
 
