@@ -78,5 +78,5 @@ func init() {
 	RootCmd.Flags().StringVar(&clientVersion, "client-version", "", "calling client library version (default is none)")
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
-	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 2.0, "timeout in seconds for http requests")
+	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 10.0, "timeout in seconds for http requests")
 }

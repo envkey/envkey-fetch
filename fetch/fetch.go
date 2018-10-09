@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -138,21 +137,8 @@ func UrlWithLoggingParams(baseUrl string, options FetchOptions) string {
 }
 
 func InitHttpClient(timeoutSeconds float64) {
-	// http.Client.Get reuses the transport. this should be created once.
-	tp := http.Transport{}
 	to := time.Second * time.Duration(timeoutSeconds)
-
-	tp.DialContext = (&net.Dialer{
-		Timeout: to,
-	}).DialContext
-
-	tp.TLSHandshakeTimeout = to
-	tp.ResponseHeaderTimeout = to
-	tp.ExpectContinueTimeout = to
-
-	Client = &http.Client{
-		Transport: &tp,
-	}
+	Client = &http.Client{Timeout: to}
 }
 
 func httpExecRequest(
