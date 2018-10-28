@@ -144,7 +144,7 @@ func TestLiveFetch(t *testing.T) {
 	// Test valid
 	validRes, err := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
 	assert.Nil(err)
-	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\"}", validRes)
+	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\",\"TEST_STRANGE_CHARS\":\"with quotes ` ' \\\\\\\" bäh\"}", validRes)
 
 	// Test invalid
 	invalidRes, err := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
