@@ -57,12 +57,15 @@ error: ENVKEY invalid
 ### Flags
 
 ```text
-    --cache              cache encrypted config as a local backup (default is false)
-    --cache-dir string   cache directory (default is $HOME/.envkey/cache)
--h, --help               help for envkey-fetch
--v, --version            prints the version
-    --verbose            print verbose output (default is false)
-    --timeout float      timeout in seconds for http requests (default 2)
+    --cache                   cache encrypted config as a local backup (default is false)
+    --cache-dir string        cache directory (default is $HOME/.envkey/cache)
+    --client-name string      calling client library name (default is none)
+    --client-version string   calling client library version (default is none)
+-h, --help                    help for envkey-fetch
+    --retry int               retry on failure
+    --timeout float           timeout in seconds for http requests (default 10)
+    --verbose                 print verbose output (default is false)
+-v, --version                 prints the version
 ```
 
 ## Further Reading
