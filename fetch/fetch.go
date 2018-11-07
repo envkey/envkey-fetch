@@ -90,7 +90,7 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 
-		if options.Retry > 1 {
+		if options.Retry > 0 {
 			options.Retry--
 			return Fetch(envkey, options)
 		}

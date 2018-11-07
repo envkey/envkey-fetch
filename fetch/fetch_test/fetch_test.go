@@ -104,7 +104,7 @@ func TestFetch(t *testing.T) {
 
 			fetch.Fetch(test.envkey, opts)
 			if test.expectErr && test.responseStatus != http.StatusNotFound {
-				assert.Equal(retry, callCount, test.desc+" should retry")
+				assert.Equal(retry+1, callCount, test.desc+" should retry")
 			} else {
 				assert.Equal(1, callCount, test.desc+" should not retry")
 			}
