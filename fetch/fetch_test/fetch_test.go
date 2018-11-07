@@ -2,6 +2,7 @@ package fetch_test
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"testing"
@@ -9,9 +10,9 @@ import (
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/fetch"
 	"github.com/envkey/envkey-fetch/version"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/jarcoal/httpmock.v1"
 )
 
 var validResult = `{"GO_TEST":"it","GO_TEST_2":"works!"}`
@@ -35,41 +36,41 @@ var fetchTests = []struct {
 	*/
 
 	{"Default host, invalid envkey - expect error",
-		"https", fetch.DefaultHost, invalidEnvkey, 404, responseInvalid, true, "", true},
+		"https", fetch.DefaultHost, invalidEnvkey, http.StatusNotFound, responseInvalid, true, "", true},
 
 	{"Custom remote host, invalid envkey - expect error ",
-		"https", customRemoteHost, invalidEnvkey + "-" + customRemoteHost, 404, responseInvalid, true, "", true},
+		"https", customRemoteHost, invalidEnvkey + "-" + customRemoteHost, http.StatusNotFound, responseInvalid, true, "", true},
 
 	{"Custom local host, invalid envkey - expect error",
-		"http", customLocalHost, invalidEnvkey + "-" + customLocalHost, 404, responseInvalid, true, "", true},
+		"http", customLocalHost, invalidEnvkey + "-" + customLocalHost, http.StatusNotFound, responseInvalid, true, "", true},
 
 	{"Default host, valid envkey with invalid passphrase - expect error",
-		"https", fetch.DefaultHost, validEnvkeyInvalidPassphrase, 200, responseSimple, true, "", true},
+		"https", fetch.DefaultHost, validEnvkeyInvalidPassphrase, http.StatusOK, responseSimple, true, "", true},
 
 	{"Custom remote host, valid envkey with invalid passphrase - expect error",
-		"https", customRemoteHost, validEnvkeyInvalidPassphrase + "-" + customRemoteHost, 200, responseSimple, true, "", true},
+		"https", customRemoteHost, validEnvkeyInvalidPassphrase + "-" + customRemoteHost, http.StatusOK, responseSimple, true, "", true},
 
 	{"Custom local host, valid envkey with invalid passphrase - expect error",
-		"http", customLocalHost, validEnvkeyInvalidPassphrase + "-" + customLocalHost, 200, responseSimple, true, "", true},
+		"http", customLocalHost, validEnvkeyInvalidPassphrase + "-" + customLocalHost, http.StatusOK, responseSimple, true, "", true},
 
 	{"Default host, valid envkey - expect success",
-		"https", fetch.DefaultHost, validEnvkeySimple, 200, responseSimple, false, validResult, true},
+		"https", fetch.DefaultHost, validEnvkeySimple, http.StatusOK, responseSimple, false, validResult, true},
 
 	{"Default host, valid envkey, caching disabled - expect success",
-		"https", fetch.DefaultHost, validEnvkeySimpleCacheDisabled, 200, responseSimpleCacheDisabled, false, validResult, false},
+		"https", fetch.DefaultHost, validEnvkeySimpleCacheDisabled, http.StatusOK, responseSimpleCacheDisabled, false, validResult, false},
 
 	{"Custom remote host, valid envkey - expect success",
-		"https", customRemoteHost, validEnvkeySimple + "-" + customRemoteHost, 200, responseSimple, false, validResult, true},
+		"https", customRemoteHost, validEnvkeySimple + "-" + customRemoteHost, http.StatusOK, responseSimple, false, validResult, true},
 
 	{"Custom local host, valid envkey - expect success",
-		"http", customLocalHost, validEnvkeySimple + "-" + customLocalHost, 200, responseSimple, false, validResult, true},
+		"http", customLocalHost, validEnvkeySimple + "-" + customLocalHost, http.StatusOK, responseSimple, false, validResult, true},
 
 	/*
 	   INHERITANCE OVERRIDE
 	*/
 
 	{"Default host, valid envkey with inheritance overrides - expect success",
-		"https", fetch.DefaultHost, validEnvkeyInheritanceOverrides, 200, responseInheritanceOverrides, false, validResultInheritanceOverrides, true},
+		"https", fetch.DefaultHost, validEnvkeyInheritanceOverrides, http.StatusOK, responseInheritanceOverrides, false, validResultInheritanceOverrides, true},
 }
 
 func TestFetch(t *testing.T) {
@@ -78,7 +79,7 @@ func TestFetch(t *testing.T) {
 	httpmock.ActivateNonDefault(fetch.Client)
 	defer httpmock.DeactivateAndReset()
 
-	opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0}
+	opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0, 0}
 
 	// Caching enabled
 	for _, test := range fetchTests {
@@ -86,6 +87,28 @@ func TestFetch(t *testing.T) {
 
 		baseUrl := (test.protocol + "://" + test.host + "/v" + strconv.Itoa(fetch.ApiVersion) + "/" + envkeyParam)
 		url := fetch.UrlWithLoggingParams(baseUrl, opts)
+
+		t.Run("failed calls should retry", func(t *testing.T) {
+			const retry = 3
+			opts := fetch.FetchOptions{true, "", "envkey-fetch", version.Version, false, 2.0, retry}
+			responder := httpmock.NewStringResponder(test.responseStatus, test.response)
+			callCount := 0
+			httpmock.RegisterResponder(
+				"GET",
+				url,
+				func(req *http.Request) (*http.Response, error) {
+					callCount++
+					return responder(req)
+				},
+			)
+
+			fetch.Fetch(test.envkey, opts)
+			if test.expectErr && test.responseStatus != http.StatusNotFound {
+				assert.Equal(retry, callCount, test.desc+" should retry")
+			} else {
+				assert.Equal(1, callCount, test.desc+" should not retry")
+			}
+		})
 
 		httpmock.RegisterResponder(
 			"GET",
@@ -105,7 +128,7 @@ func TestFetch(t *testing.T) {
 
 		// Test caching
 		var c *cache.Cache
-		if test.responseStatus == 200 && !test.expectErr && test.allowCaching {
+		if test.responseStatus == http.StatusOK && !test.expectErr && test.allowCaching {
 			c, _ = cache.NewCache("")
 			res, _ := c.Read(envkeyParam)
 			assert.Equal(test.response, string(res), "Should properly cache the response.")
@@ -117,7 +140,7 @@ func TestFetch(t *testing.T) {
 			assert.NotNil(err, "Should not cache the response.")
 		}
 
-		res, err = fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+		res, err = fetch.Fetch(test.envkey, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0, 0})
 
 		// With caching disabled
 		if test.expectErr {
@@ -142,12 +165,12 @@ func TestLiveFetch(t *testing.T) {
 	assert := assert.New(t)
 
 	// Test valid
-	validRes, err := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+	validRes, err := fetch.Fetch(VALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0, 0})
 	assert.Nil(err)
 	assert.Equal("{\"TEST\":\"it\",\"TEST_2\":\"works!\",\"TEST_INJECTION\":\"'$(uname)\",\"TEST_SINGLE_QUOTES\":\"this' is ok\",\"TEST_SPACES\":\"it does work!\",\"TEST_STRANGE_CHARS\":\"with quotes ` ' \\\\\\\" bäh\"}", validRes)
 
 	// Test invalid
-	invalidRes, err := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0})
+	invalidRes, err := fetch.Fetch(INVALID_LIVE_ENVKEY, fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0, 0})
 	assert.NotNil(err)
 	assert.Equal("ENVKEY invalid", string(err.Error()))
 	assert.Equal("", invalidRes)
@@ -161,20 +184,20 @@ func TestBackup(t *testing.T) {
 
 	// Test with backup
 	fetch.DefaultHost = "localhost:61034"
-	opts := fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0}
+	opts := fetch.FetchOptions{false, "", "envkey-fetch", version.Version, false, 2.0, 0}
 	url := fetch.UrlWithLoggingParams("https://"+fetch.BackupHost+"/v"+strconv.Itoa(fetch.ApiVersion)+"/validkey", opts)
 	restrictedUrl := fetch.UrlWithLoggingParams(fmt.Sprintf("%s?v=%s&id=%s", ("https://"+fetch.BackupHostRestricted), strconv.Itoa(fetch.ApiVersion), "validkey"), opts)
 
 	httpmock.RegisterResponder(
 		"GET",
 		url,
-		httpmock.NewStringResponder(200, responseSimple),
+		httpmock.NewStringResponder(http.StatusOK, responseSimple),
 	)
 
 	httpmock.RegisterResponder(
 		"GET",
 		restrictedUrl,
-		httpmock.NewStringResponder(200, responseSimple),
+		httpmock.NewStringResponder(http.StatusOK, responseSimple),
 	)
 
 	res, err := fetch.Fetch(validEnvkeySimple, opts)
