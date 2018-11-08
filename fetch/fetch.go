@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,7 +31,8 @@ type FetchOptions struct {
 	ClientVersion  string
 	VerboseOutput  bool
 	TimeoutSeconds float64
-	Retry          int64
+	Retries        uint8
+	RetryBackoff   float64
 }
 
 var DefaultHost = "env.envkey.com"
@@ -89,11 +91,6 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 		if options.VerboseOutput {
 			fmt.Fprintln(os.Stderr, "Error parsing and decrypting:")
 			fmt.Fprintln(os.Stderr, err)
-		}
-
-		if options.Retry > 0 {
-			options.Retry--
-			return Fetch(envkey, options)
 		}
 
 		if fetchCache != nil {
@@ -232,6 +229,28 @@ func fetchEnv(envkey string, options FetchOptions, fetchCache *cache.Cache) (*pa
 	envkeyParam, pw, envkeyHost := splitEnvkey(envkey)
 	response := new(parser.EnvServiceResponse)
 	err := getJson(envkeyHost, envkeyParam, options, response, fetchCache)
+
+	if err != nil && options.Retries > 0 {
+		var retry uint8 = 0
+		for retry < options.Retries {
+			if options.RetryBackoff > 0 {
+				var backoff float64 = 0
+				backoff = options.RetryBackoff * math.Pow(2, (float64(retry-1)))
+				if backoff > 0 {
+					time.Sleep(time.Duration(backoff) * time.Second)
+				}
+			}
+
+			err = getJson(envkeyHost, envkeyParam, options, response, fetchCache)
+			if err == nil {
+				break
+			}
+
+			retry++
+		}
+
+	}
+
 	return response, envkeyParam, pw, err
 }
 
@@ -365,7 +384,7 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 			}
 			return err
 		}
-	} else if backupFetchErr != nil || (r != nil && r.StatusCode >= 500) {
+	} else if backupFetchErr != nil || (r != nil && r.StatusCode >= 400 && r.StatusCode != 404) {
 		// try loading from cache
 		if fetchCache == nil {
 			if backupFetchErr == nil {
