@@ -30,6 +30,7 @@ type FetchOptions struct {
 	ClientVersion  string
 	VerboseOutput  bool
 	TimeoutSeconds float64
+	Retry          int64
 }
 
 var DefaultHost = "env.envkey.com"
@@ -88,6 +89,11 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 		if options.VerboseOutput {
 			fmt.Fprintln(os.Stderr, "Error parsing and decrypting:")
 			fmt.Fprintln(os.Stderr, err)
+		}
+
+		if options.Retry > 0 {
+			options.Retry--
+			return Fetch(envkey, options)
 		}
 
 		if fetchCache != nil {

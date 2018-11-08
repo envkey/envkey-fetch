@@ -37,6 +37,7 @@ var verboseOutput bool
 var clientName string
 var clientVersion string
 var timeoutSeconds float64
+var retry int64
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -49,7 +50,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			res, err := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds})
+			res, err := fetch.Fetch(args[0], fetch.FetchOptions{shouldCache, cacheDir, clientName, clientVersion, verboseOutput, timeoutSeconds, retry})
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "error: "+err.Error())
 				os.Exit(1)
@@ -79,4 +80,5 @@ func init() {
 	RootCmd.Flags().BoolVarP(&printVersion, "version", "v", false, "prints the version")
 	RootCmd.Flags().BoolVar(&verboseOutput, "verbose", false, "print verbose output (default is false)")
 	RootCmd.Flags().Float64Var(&timeoutSeconds, "timeout", 10.0, "timeout in seconds for http requests")
+	RootCmd.Flags().Int64Var(&retry, "retry", 0, "retry on failure")
 }
