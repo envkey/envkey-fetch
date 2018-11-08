@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -138,7 +139,15 @@ func UrlWithLoggingParams(baseUrl string, options FetchOptions) string {
 
 func InitHttpClient(timeoutSeconds float64) {
 	to := time.Second * time.Duration(timeoutSeconds)
-	Client = &http.Client{Timeout: to}
+	Client = &http.Client{
+		Timeout: to,
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout: time.Duration(timeoutSeconds/2) * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: time.Duration(timeoutSeconds/2) * time.Second,
+		},
+	}
 }
 
 func httpExecRequest(
@@ -206,8 +215,7 @@ func logRequestIfVerbose(url string, options FetchOptions, err error, r *http.Re
 			fmt.Fprintln(os.Stderr, err)
 		} else if r.StatusCode >= 500 {
 			fmt.Fprintf(os.Stderr, "Loading from %s failed.\n", url)
-			fmt.Fprintln(os.Stderr, "Response status:")
-			fmt.Fprintln(os.Stderr, string(r.StatusCode))
+			fmt.Fprintf(os.Stderr, "Response status: %s\n", strconv.Itoa(r.StatusCode))
 		} else {
 			fmt.Fprintf(os.Stderr, "Loaded from %s successfully.\n", url)
 		}
