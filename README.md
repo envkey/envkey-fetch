@@ -62,7 +62,8 @@ error: ENVKEY invalid
     --client-name string      calling client library name (default is none)
     --client-version string   calling client library version (default is none)
 -h, --help                    help for envkey-fetch
-    --retry int               retry on failure
+    --retries uint8           number of times to retry requests on failure (default 3)
+    --retryBackoff float      retry backoff factor: {retryBackoff} * (2 ^ {retries - 1}) (default 1)
     --timeout float           timeout in seconds for http requests (default 10)
     --verbose                 print verbose output (default is false)
 -v, --version                 prints the version
