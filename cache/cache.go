@@ -13,16 +13,23 @@ type Cache struct {
 	Done chan error
 }
 
+func DefaultPath() (string, error) {
+	home, err := homedir.Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".envkey", "cache"), nil
+}
+
 func NewCache(dir string) (*Cache, error) {
 	var withDir string
 	var err error
 
 	if dir == "" {
-		home, err := homedir.Dir()
+		withDir, err = DefaultPath()
 		if err != nil {
 			return nil, err
 		}
-		withDir = filepath.Join(home, ".envkey", "cache")
 
 	} else {
 		withDir, err = homedir.Expand(dir)

@@ -67,14 +67,20 @@ func Fetch(envkey string, options FetchOptions) (string, error) {
 
 	if options.ShouldCache {
 		if options.VerboseOutput {
-			fmt.Fprintf(os.Stderr, "Initializing cache at %s", options.CacheDir)
+			var cachePath string
+			if options.CacheDir == "" {
+				cachePath, _ = cache.DefaultPath()
+			} else {
+				cachePath = options.CacheDir
+			}
+			fmt.Fprintf(os.Stderr, "Initializing cache at %s\n", cachePath)
 		}
 
 		// If initializing cache fails for some reason, ignore and let it be nil
 		fetchCache, cacheErr = cache.NewCache(options.CacheDir)
 
-		if options.VerboseOutput {
-			fmt.Fprintf(os.Stderr, "Error initializing cache: %s", cacheErr.Error())
+		if options.VerboseOutput && cacheErr != nil {
+			fmt.Fprintf(os.Stderr, "Error initializing cache: %s\n", cacheErr.Error())
 		}
 	}
 
