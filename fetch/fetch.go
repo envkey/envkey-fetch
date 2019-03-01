@@ -146,9 +146,9 @@ func InitHttpClient(timeoutSeconds float64) {
 		Timeout: to,
 		Transport: &http.Transport{
 			Dial: (&net.Dialer{
-				Timeout: time.Duration(timeoutSeconds/2) * time.Second,
+				Timeout: time.Duration(timeoutSeconds) * time.Second,
 			}).Dial,
-			TLSHandshakeTimeout: time.Duration(timeoutSeconds/2) * time.Second,
+			TLSHandshakeTimeout: time.Duration(timeoutSeconds) * time.Second,
 		},
 	}
 }
@@ -241,6 +241,9 @@ func fetchEnv(envkey string, options FetchOptions, fetchCache *cache.Cache) (*pa
 				}
 			}
 
+			if options.VerboseOutput {
+				fmt.Fprintf(os.Stderr, "\nRetrying...\n")
+			}
 			err = getJson(envkeyHost, envkeyParam, options, response, fetchCache)
 			if err == nil {
 				break
@@ -404,6 +407,11 @@ func getJson(envkeyHost string, envkeyParam string, options FetchOptions, respon
 		}
 
 	} else if r != nil && r.StatusCode == 404 {
+		if options.VerboseOutput {
+			fmt.Fprintln(os.Stderr, "Fetch error.")
+			fmt.Fprintln(os.Stderr, "404 not found")
+		}
+
 		// Since envkey wasn't found and permission may have been removed, clear cache
 		if fetchCache != nil {
 			fetchCache.Delete(envkeyParam)
