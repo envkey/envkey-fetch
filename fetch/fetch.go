@@ -151,6 +151,7 @@ func InitHttpClient(timeoutSeconds float64) {
 	Client = &http.Client{
 		Timeout: to,
 		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
 			Dial: (&net.Dialer{
 				Timeout: time.Duration(timeoutSeconds) * time.Second,
 			}).Dial,
