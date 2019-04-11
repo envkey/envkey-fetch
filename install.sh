@@ -58,7 +58,7 @@ download_envkey () {
     mv envkey-fetch.exe $HOME/bin/
     echo "envkey-fetch is installed in $HOME/bin"
   else
-    sudo mv envkey-fetch /usr/local/bin/
+    mv envkey-fetch /usr/local/bin/
     echo "envkey-fetch is installed in /usr/local/bin"
   fi
 
