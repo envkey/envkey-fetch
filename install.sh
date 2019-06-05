@@ -25,8 +25,22 @@ esac
 
 if [[ "$(uname -m)" == 'x86_64' ]]; then
   ARCH="amd64"
+elif [[ "$(uname -m)" == armv5* ]]; then
+  ARCH="armv5"
+elif [[ "$(uname -m)" == armv6* ]]; then
+  ARCH="armv6"
+elif [[ "$(uname -m)" == armv7* ]]; then
+  ARCH="armv7"
+elif [[ "$(uname -m)" == 'arm64' ]]; then
+  ARCH="arm64"
 else
   ARCH="386"
+fi
+
+if [[ "$(cat /proc/1/cgroup 2> /dev/null | grep docker | wc -l)" > 0 ]] || [ -f /.dockerenv ]; then
+  IS_DOCKER=true
+else
+  IS_DOCKER=false
 fi
 
 curl -s -o .ek_tmp_version https://raw.githubusercontent.com/envkey/envkey-fetch/master/version.txt
@@ -40,6 +54,11 @@ welcome_envkey () {
   echo ""
 }
 
+cleanup () {
+  rm envkey-fetch.tar.gz
+  rm -f envkey-fetch
+}
+
 download_envkey () {
   echo "Downloading envkey-fetch binary for ${PLATFORM}-${ARCH}"
   url="https://github.com/envkey/envkey-fetch/releases/download/v${VERSION}/envkey-fetch_${VERSION}_${PLATFORM}_${ARCH}.tar.gz"
@@ -49,9 +68,15 @@ download_envkey () {
   tar zxf envkey-fetch.tar.gz envkey-fetch.exe 2> /dev/null
   tar zxf envkey-fetch.tar.gz envkey-fetch 2> /dev/null
 
-  if [ "$PLATFORM" == "darwin" ]; then
-    mv envkey-fetch /usr/local/bin/
-    echo "envkey-fetch is installed in /usr/local/bin"
+  if [ "$PLATFORM" == "darwin" ] || $IS_DOCKER ; then
+    if [[ -d /usr/local/bin ]]; then
+      mv envkey-fetch /usr/local/bin/
+      echo "envkey-fetch is installed in /usr/local/bin"
+    else
+      echo >&2 'Error: /usr/local/bin does not exist. Create this directory with appropriate permissions, then re-install.'
+      cleanup
+      exit 1
+    fi
   elif [ "$PLATFORM" == "windows" ]; then
     # ensure $HOME/bin exists (it's in PATH but not present in default git-bash install)
     mkdir $HOME/bin 2> /dev/null
@@ -61,13 +86,11 @@ download_envkey () {
     sudo mv envkey-fetch /usr/local/bin/
     echo "envkey-fetch is installed in /usr/local/bin"
   fi
-
-  rm envkey-fetch.tar.gz
-  rm -f envkey-fetch
 }
 
 welcome_envkey
 download_envkey
+cleanup
 
 echo "Installation complete. Info:"
 echo ""
