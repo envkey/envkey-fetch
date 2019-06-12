@@ -69,6 +69,13 @@ error: ENVKEY invalid
 -v, --version                 prints the version
 ```
 
+## x509 error / ca-certificates
+
+On a stripped down OS like Alpine Linux, you may get an `x509: certificate signed by unknown authority` error when `envkey-fetch` attempts to load your config. `envkey-fetch` tries to handle this by including its own set of trusted CAs via [gocertifi](https://github.com/certifi/gocertifi), but if you're getting this error anyway, you can fix it by ensuring that the `ca-certificates` dependency is installed. On Alpine you'll want to run:
+```
+apk add --no-cache ca-certificates
+```
+
 ## Further Reading
 
 For more on EnvKey in general:
