@@ -8,12 +8,27 @@ If you want to build an EnvKey library in a language that isn't yet officially s
 
 ## Installation
 
-envkey-fetch compiles into a simple static binary with no dependencies, which makes installation a simple matter of fetching the right binary for your platform and putting it in your `PATH`. An `install.sh` script is available to simplify this.
+envkey-fetch compiles into a simple static binary with no dependencies, which makes installation a simple matter of fetching the right binary for your platform and putting it in your `PATH`. An `install.sh` script is available to simplify this, as well as a [homebrew tap](https://github.com/envkey/homebrew-envkey)..
 
 **Install via bash:**
 
 ```bash
 curl -s https://raw.githubusercontent.com/envkey/envkey-fetch/master/install.sh | bash
+```
+
+**Install via [homebrew](https://brew.sh/) tap:**
+
+Either tap the [homebrew-envkey](https://github.com/envkey/homebrew-envkey) repo first, then install:
+
+```bash
+brew tap envkey/envkey
+brew install envkey-fetch
+```
+
+Or you can install the formula directly:
+
+```bash
+brew install envkey/envkey/envkey-fetch
 ```
 
 **Install manually:**
