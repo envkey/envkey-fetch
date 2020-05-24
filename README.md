@@ -16,21 +16,6 @@ envkey-fetch compiles into a simple static binary with no dependencies, which ma
 curl -s https://raw.githubusercontent.com/envkey/envkey-fetch/master/install.sh | bash
 ```
 
-**Install via [homebrew](https://brew.sh/) tap:**
-
-Either tap the [homebrew-envkey](https://github.com/envkey/homebrew-envkey) repo first, then install:
-
-```bash
-brew tap envkey/envkey
-brew install envkey-fetch
-```
-
-Or you can install the formula directly:
-
-```bash
-brew install envkey/envkey/envkey-fetch
-```
-
 **Install manually:**
 
 Find the [release](https://github.com/envkey/envkey-fetch/releases) for your platform and architecture, and stick the appropriate binary somewhere in your `PATH` (or wherever you like really).
