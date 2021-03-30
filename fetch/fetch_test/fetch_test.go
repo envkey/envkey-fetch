@@ -10,7 +10,7 @@ import (
 	"github.com/envkey/envkey-fetch/cache"
 	"github.com/envkey/envkey-fetch/fetch"
 	"github.com/envkey/envkey-fetch/version"
-	httpmock "gopkg.in/jarcoal/httpmock.v1"
+	"github.com/jarcoal/httpmock"
 
 	"github.com/stretchr/testify/assert"
 )
