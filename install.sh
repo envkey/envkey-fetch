@@ -33,6 +33,8 @@ elif [[ "$(uname -m)" == armv7* ]]; then
   ARCH="armv7"
 elif [[ "$(uname -m)" == 'arm64' ]]; then
   ARCH="arm64"
+elif [[ "$(uname -m)" == 'aarch64' ]]; then
+  ARCH="arm64"
 else
   ARCH="386"
 fi
