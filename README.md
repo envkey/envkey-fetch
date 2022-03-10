@@ -8,7 +8,7 @@ If you want to build an EnvKey library in a language that isn't yet officially s
 
 # v2
 
-In [EnvKey v2](https://v2.envkey.com), this library has been folded into [envkey-source](https://github.com/envkey/envkey/tree/main/public/sdks/envkey-source). Using v2 requires an EnvKey v2 organization (it won't work with ENVKEYs generated in a v1 org).
+In [EnvKey v2](https://v2.envkey.com), this library has been folded into [envkey-source](https://github.com/envkey/envkey/tree/main/public/sdks/envkey-source). Equivalent functionality can be accomplished using `envkey-source --json`. Using v2 requires an EnvKey v2 organization (it won't work with ENVKEYs generated in a v1 org).
 
 [Here's a guide on migrating from v1 to v2.](https://docs-v2.envkey.com/docs/migrating-from-v1)
 
