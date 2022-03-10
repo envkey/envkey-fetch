@@ -6,6 +6,12 @@ It is used by EnvKey's various Client Libraries, including [envkey-source](https
 
 If you want to build an EnvKey library in a language that isn't yet officially supported, build some other type of integration, or simply play around with EnvKey on the command line, envkey-fetch is the library for you. If you just want to integrate EnvKey with your project, check out one of the aforementioned higher level libraries.
 
+# v2
+
+In [EnvKey v2](https://v2.envkey.com), this library has been folded into [envkey-source](https://github.com/envkey/envkey/tree/main/public/sdks/envkey-source). Using v2 requires an EnvKey v2 organization (it won't work with ENVKEYs generated in a v1 org).
+
+[Here's a guide on migrating from v1 to v2.](https://docs-v2.envkey.com/docs/migrating-from-v1)
+
 ## Installation
 
 envkey-fetch compiles into a simple static binary with no dependencies, which makes installation a simple matter of fetching the right binary for your platform and putting it in your `PATH`. An `install.sh` script is available to simplify this, as well as a [homebrew tap](https://github.com/envkey/homebrew-envkey)..
